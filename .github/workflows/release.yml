@@ -240,6 +240,7 @@ jobs:
           & .\scripts\test\test-install-windows.ps1 -InstallerPath $env:DOWNLOADED_INSTALLER
 
       - name: Require Authenticode configuration
+        if: github.repository == 'uvwt/agentdock'
         shell: pwsh
         env:
           WINDOWS_SIGNING_CERT_BASE64: ${{ secrets.WINDOWS_SIGNING_CERT_BASE64 }}
@@ -286,6 +287,7 @@ jobs:
             -BinaryPath .\dist\agentdock.exe
 
       - name: Authenticode sign and verify
+        if: github.repository == 'uvwt/agentdock'
         shell: pwsh
         env:
           WINDOWS_SIGNING_CERT_BASE64: ${{ secrets.WINDOWS_SIGNING_CERT_BASE64 }}
@@ -342,6 +344,7 @@ jobs:
           path: payload
 
       - name: Require Authenticode configuration
+        if: github.repository == 'uvwt/agentdock'
         shell: pwsh
         env:
           WINDOWS_SIGNING_CERT_BASE64: ${{ secrets.WINDOWS_SIGNING_CERT_BASE64 }}
@@ -378,14 +381,18 @@ jobs:
           $tag = '${{ github.event.inputs.tag || github.ref_name }}'
           $version = $tag.TrimStart('v')
           $outputDir = Join-Path $PWD 'dist'
-          & .\packaging\windows\build-windows-offline-setup.ps1 `
-            -Version $version `
-            -Architecture '${{ matrix.goarch }}' `
-            -AgentDockArchive '.\payload\agentdock_windows_${{ matrix.goarch }}.zip' `
-            -AgentDockChecksumFile '.\payload\agentdock_windows_${{ matrix.goarch }}.zip.sha256' `
-            -CloudflaredBinary '.\payload\cloudflared.exe' `
-            -OutputDirectory $outputDir `
-            -SignedBuild
+          $parameters = @{
+            Version = $version
+            Architecture = '${{ matrix.goarch }}'
+            AgentDockArchive = '.\payload\agentdock_windows_${{ matrix.goarch }}.zip'
+            AgentDockChecksumFile = '.\payload\agentdock_windows_${{ matrix.goarch }}.zip.sha256'
+            CloudflaredBinary = '.\payload\cloudflared.exe'
+            OutputDirectory = $outputDir
+          }
+          if ('${{ github.repository }}' -eq 'uvwt/agentdock') {
+            $parameters.SignedBuild = $true
+          }
+          & .\packaging\windows\build-windows-offline-setup.ps1 @parameters
 
       - name: Upload Setup artifact
         uses: actions/upload-artifact@v4
@@ -490,6 +497,7 @@ jobs:
   publish-container:
     name: Publish container (${{ matrix.variant }})
     needs: publish
+    if: github.repository == 'uvwt/agentdock'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
