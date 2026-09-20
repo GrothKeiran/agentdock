@@ -8,6 +8,8 @@ struct EditableServiceSettings {
     let browserEnabled: Bool
     let browserCDPURL: String
     let browserReuseExistingCDP: Bool
+    let computerUseEnabled: Bool
+    let computerUseAllowSystemKeys: Bool
     let acpEnabled: Bool
     let acpProfiles: [ACPProfileConfiguration]
     let acpDefaultProfile: String
@@ -19,6 +21,8 @@ struct EditableServiceSettings {
         browserEnabled: Bool,
         browserCDPURL: String,
         browserReuseExistingCDP: Bool,
+        computerUseEnabled: Bool,
+        computerUseAllowSystemKeys: Bool,
         acpEnabled: Bool,
         acpProfiles: [ACPProfileConfiguration] = [],
         acpDefaultProfile: String = ""
@@ -29,6 +33,8 @@ struct EditableServiceSettings {
         self.browserEnabled = browserEnabled
         self.browserCDPURL = browserCDPURL
         self.browserReuseExistingCDP = browserReuseExistingCDP
+        self.computerUseEnabled = computerUseEnabled
+        self.computerUseAllowSystemKeys = computerUseAllowSystemKeys
         self.acpEnabled = acpEnabled
         self.acpProfiles = acpProfiles
         self.acpDefaultProfile = acpDefaultProfile
@@ -113,6 +119,8 @@ struct EditableServiceSettings {
             browserEnabled: browserEnabled,
             browserCDPURL: browserCDPURL,
             browserReuseExistingCDP: browserReuseExistingCDP,
+            computerUseEnabled: computerUseEnabled,
+            computerUseAllowSystemKeys: computerUseEnabled && computerUseAllowSystemKeys,
             acpEnabled: acpEnabled,
             acpProfiles: profiles,
             acpDefaultProfile: defaultProfileID
@@ -170,6 +178,8 @@ final class ServiceConfigurationController {
             "AGENTDOCK_BROWSER_ENABLED": settings.browserEnabled ? "true" : "false",
             "AGENTDOCK_BROWSER_CDP_URL": settings.browserCDPURL,
             "AGENTDOCK_BROWSER_REUSE_EXISTING_CDP": settings.browserReuseExistingCDP ? "true" : "false",
+            "AGENTDOCK_COMPUTER_USE_ENABLED": settings.computerUseEnabled ? "true" : "false",
+            "AGENTDOCK_COMPUTER_USE_ALLOW_SYSTEM_KEYS": settings.computerUseAllowSystemKeys ? "true" : "false",
             "AGENTDOCK_ACP_ENABLED": settings.acpEnabled ? "true" : "false",
             "AGENTDOCK_ACP_PROFILES_JSON": try ACPDesktopConfiguration.encodeProfiles(settings.acpProfiles),
             "AGENTDOCK_ACP_DEFAULT_PROFILE": settings.acpDefaultProfile,

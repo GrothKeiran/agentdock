@@ -147,6 +147,26 @@ func TestToolEnvelopeMCPImageStripsInternalBase64FromStructuredContent(t *testin
 	}
 }
 
+func TestToolEnvelopeComputerSnapshotReturnsTextAndImage(t *testing.T) {
+	response := toolEnvelope("computer_snapshot", map[string]any{
+		"computer_ok":          true,
+		"snapshot_id":          "cs_test",
+		"_mcp_image_base64":    "desktop-image",
+		"_mcp_image_mime_type": "image/png",
+	}, nil)
+	content := response["content"].([]map[string]any)
+	if len(content) != 2 || content[0]["type"] != "text" || content[1]["type"] != "image" || content[1]["data"] != "desktop-image" {
+		t.Fatalf("computer snapshot content = %#v", content)
+	}
+	structured := response["structuredContent"].(map[string]any)
+	if structured["snapshot_id"] != "cs_test" {
+		t.Fatalf("computer snapshot structuredContent = %#v", structured)
+	}
+	if _, exists := structured["_mcp_image_base64"]; exists {
+		t.Fatalf("computer snapshot leaked base64: %#v", structured)
+	}
+}
+
 func TestToolEnvelopePassesThroughDynamicMCPContent(t *testing.T) {
 	response := toolEnvelope("mcp_tool_call", map[string]any{
 		"ok":   true,

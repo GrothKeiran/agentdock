@@ -162,6 +162,21 @@
   <data name="EnableBrowserCdp" xml:space="preserve">
     <value>启用浏览器 CDP 控制</value>
   </data>
+  <data name="ComputerUse" xml:space="preserve">
+    <value>Computer Use</value>
+  </data>
+  <data name="EnableComputerUse" xml:space="preserve">
+    <value>允许已连接的 AI 客户端控制这台电脑</value>
+  </data>
+  <data name="ComputerUseWarning" xml:space="preserve">
+    <value>此功能会通过 AgentDock MCP 授予所有桌面应用的截图、鼠标和键盘权限。请始终启用身份验证。</value>
+  </data>
+  <data name="AllowSystemKeys" xml:space="preserve">
+    <value>同时允许系统级快捷键（切换应用、退出、锁屏）</value>
+  </data>
+  <data name="ComputerUseConsent" xml:space="preserve">
+    <value>确定启用 Computer Use 吗？已连接的 AI 客户端将能够查看桌面，并在所有应用中控制鼠标和键盘。仅当 AgentDock 已配置身份验证且你信任所有连接客户端时继续。</value>
+  </data>
   <data name="ConnectionMode" xml:space="preserve">
     <value>连接方式</value>
   </data>

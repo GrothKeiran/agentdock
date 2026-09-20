@@ -18,6 +18,7 @@ import (
 	toolacp "github.com/uvwt/agentdock/internal/tool/acp"
 	toolbrowser "github.com/uvwt/agentdock/internal/tool/browser"
 	toolcommand "github.com/uvwt/agentdock/internal/tool/command"
+	toolcomputer "github.com/uvwt/agentdock/internal/tool/computer"
 	toolcontract "github.com/uvwt/agentdock/internal/tool/contract"
 	toolcore "github.com/uvwt/agentdock/internal/tool/core"
 	toolfile "github.com/uvwt/agentdock/internal/tool/file"
@@ -42,6 +43,7 @@ type Runtime struct {
 	dynamicMCP     *toolmcp.Service
 	media          *toolmedia.Service
 	browser        *toolbrowser.Service
+	computer       *toolcomputer.Service
 	recall         *toolrecall.Service
 	evolution      *evolution.Service
 	taskTools      *tooltask.Service
@@ -94,6 +96,7 @@ func NewRuntime(cfg config.Config) (*Runtime, error) {
 		toolbrowser.Config{AgentDockHome: cfg.AgentDockHome, ExecutablePath: cfg.BrowserExecutablePath, CDPURL: cfg.BrowserCDPURL, ReuseExistingCDP: cfg.BrowserReuseExistingCDP},
 		runtime.media.PublishBrowserScreenshot,
 	)
+	runtime.computer = toolcomputer.New(cfg.AgentDockHome, cfg.ComputerUseAllowSystemKeys, runtime.media.PublishComputerScreenshot)
 	runtime.recall = toolrecall.New(func() config.Config { return runtime.cfg })
 	runtime.evolution = evolution.New(func() config.Config { return runtime.cfg }, tasks)
 	runtime.taskTools = tooltask.New(func() config.Config { return runtime.cfg }, tasks, runtime.evolution)

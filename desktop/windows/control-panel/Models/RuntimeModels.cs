@@ -100,6 +100,12 @@ public sealed class ControlPanelSettings
     [JsonPropertyName("browser_reuse_existing_cdp")]
     public bool BrowserReuseExistingCdp { get; set; }
 
+    [JsonPropertyName("computer_use_enabled")]
+    public bool ComputerUseEnabled { get; set; }
+
+    [JsonPropertyName("computer_use_allow_system_keys")]
+    public bool ComputerUseAllowSystemKeys { get; set; }
+
     [JsonPropertyName("acp_enabled")]
     public bool AcpEnabled { get; set; }
 

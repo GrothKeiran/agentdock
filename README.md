@@ -146,7 +146,13 @@ AgentDock can optionally act as a native ACP client and host a local coding-agen
 - Navigate, click, type, select, and wait
 - Inspect page text, interactive elements, errors, and network responses
 - Persist login state, use dedicated browser profiles, and capture screenshots
-- Use system Chrome and macOS desktop automation
+- Opt in to native Computer Use so authenticated MCP clients can inspect the interactive desktop and run bounded mouse/keyboard action batches
+- Bind every desktop action to the latest screenshot id to prevent stale-coordinate input; system-level shortcuts remain separately disabled by default
+- Use native dependency-free Windows capture/input, macOS system automation, or Linux desktop command adapters
+
+Computer Use is disabled by default. Enable `AGENTDOCK_COMPUTER_USE_ENABLED=true` (or `--computer-use-enabled`) and restart AgentDock; enable `AGENTDOCK_COMPUTER_USE_ALLOW_SYSTEM_KEYS=true` only when the connected client also needs app switching, quitting, locking, or similar shortcuts. Reconnect the MCP client or start a new web chat after restarting so it refreshes the tool list. The client then uses `computer_apps`, `computer_snapshot`, and `computer_act`; screenshots are returned as MCP image content, so a web client does not need local filesystem access. Keep Token or OAuth authentication enabled before exposing `/mcp` beyond localhost.
+
+Windows uses the interactive user session and has no extra runtime dependency. On macOS, grant the AgentDock process Screen Recording and Accessibility/Automation access when prompted. Linux input requires `xdotool`; window inventory uses `wmctrl` or falls back to `xdotool`; screenshots use one of `grim`, `gnome-screenshot`, `scrot`, ImageMagick `import`, or the dependency-light X11 `xwd` fallback. `xdotool` input is intended for X11, while Wayland support depends on the compositor.
 
 ### Recoverable tasks
 

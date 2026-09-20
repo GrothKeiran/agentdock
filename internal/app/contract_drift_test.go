@@ -10,6 +10,7 @@ import (
 	"github.com/uvwt/agentdock/internal/evolution"
 	toolacp "github.com/uvwt/agentdock/internal/tool/acp"
 	toolcommand "github.com/uvwt/agentdock/internal/tool/command"
+	toolcomputer "github.com/uvwt/agentdock/internal/tool/computer"
 	toolcontract "github.com/uvwt/agentdock/internal/tool/contract"
 	toolfile "github.com/uvwt/agentdock/internal/tool/file"
 	toolmcp "github.com/uvwt/agentdock/internal/tool/mcp"
@@ -21,9 +22,10 @@ import (
 
 func TestAllToolDefinitionsHaveStrictCompilableInputContracts(t *testing.T) {
 	cfg := config.Config{
-		NexusEndpoint:  "http://127.0.0.1:18777",
-		BrowserEnabled: true,
-		ACPEnabled:     true,
+		NexusEndpoint:      "http://127.0.0.1:18777",
+		BrowserEnabled:     true,
+		ComputerUseEnabled: true,
+		ACPEnabled:         true,
 	}
 	for _, definition := range toolDefinitionsForConfig(cfg) {
 		if got := definition.InputSchema["additionalProperties"]; got != false {
@@ -76,6 +78,9 @@ func TestTypedToolRequestFieldsMatchPublishedSchemas(t *testing.T) {
 		{name: toolcommand.ToolExecCommand, request: toolcommand.ExecRequest{}, exact: true, allowExtra: []string{"runtime", "wsl_distribution"}},
 		{name: toolcommand.ToolSessionObserve, request: toolcommand.SessionObserveRequest{}, exact: true},
 		{name: toolcommand.ToolSessionAct, request: toolcommand.SessionActRequest{}, exact: true},
+		{name: toolcomputer.ToolApps, request: toolcomputer.AppsRequest{}, exact: true},
+		{name: toolcomputer.ToolSnapshot, request: toolcomputer.SnapshotRequest{}, exact: true},
+		{name: toolcomputer.ToolAct, request: toolcomputer.ActRequest{}, exact: true},
 		{name: tooltask.ToolTaskManage, request: tooltask.ManageRequest{}, exact: true},
 		{name: "workflow_template_manage", request: tooltask.WorkflowRequest{}},
 		{name: evolution.ToolName, request: evolution.Request{}},

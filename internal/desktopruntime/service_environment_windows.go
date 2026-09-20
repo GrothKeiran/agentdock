@@ -29,6 +29,8 @@ var managedCoreEnvironment = []string{
 	"AGENTDOCK_BROWSER_ENABLED",
 	"AGENTDOCK_BROWSER_CDP_URL",
 	"AGENTDOCK_BROWSER_REUSE_EXISTING_CDP",
+	"AGENTDOCK_COMPUTER_USE_ENABLED",
+	"AGENTDOCK_COMPUTER_USE_ALLOW_SYSTEM_KEYS",
 	"AGENTDOCK_ACP_ENABLED",
 	"AGENTDOCK_ACP_PROFILES_JSON",
 	"AGENTDOCK_ACP_DEFAULT_PROFILE",
@@ -54,6 +56,8 @@ type controlPanelSettings struct {
 	BrowserEnabled          bool                     `json:"browser_enabled"`
 	BrowserCDPURL           string                   `json:"browser_cdp_url"`
 	BrowserReuseExistingCDP bool                     `json:"browser_reuse_existing_cdp"`
+	ComputerUseEnabled      bool                     `json:"computer_use_enabled"`
+	ComputerUseSystemKeys   bool                     `json:"computer_use_allow_system_keys"`
 	ACPEnabled              bool                     `json:"acp_enabled"`
 	ACPProfiles             []agentconfig.ACPProfile `json:"acp_profiles,omitempty"`
 	ACPDefaultProfile       string                   `json:"acp_default_profile,omitempty"`
@@ -86,15 +90,17 @@ func platformPrepareCoreEnvironment(runtimeRoot string) error {
 	}
 
 	managed := map[string]string{
-		"AGENTDOCK_RUNTIME_ROOT":               root,
-		"AGENTDOCK_AUTH_TOKEN":                 authToken,
-		"AGENTDOCK_HOST":                       "127.0.0.1",
-		"AGENTDOCK_PORT":                       strconv.Itoa(settings.Port),
-		"AGENTDOCK_LOG_LEVEL":                  settings.LogLevel,
-		"AGENTDOCK_MCP_APPS_ENABLED":           strconv.FormatBool(settings.MCPAppsEnabled),
-		"AGENTDOCK_BROWSER_ENABLED":            strconv.FormatBool(settings.BrowserEnabled),
-		"AGENTDOCK_BROWSER_REUSE_EXISTING_CDP": strconv.FormatBool(settings.BrowserReuseExistingCDP),
-		"AGENTDOCK_ACP_ENABLED":                strconv.FormatBool(settings.ACPEnabled),
+		"AGENTDOCK_RUNTIME_ROOT":                   root,
+		"AGENTDOCK_AUTH_TOKEN":                     authToken,
+		"AGENTDOCK_HOST":                           "127.0.0.1",
+		"AGENTDOCK_PORT":                           strconv.Itoa(settings.Port),
+		"AGENTDOCK_LOG_LEVEL":                      settings.LogLevel,
+		"AGENTDOCK_MCP_APPS_ENABLED":               strconv.FormatBool(settings.MCPAppsEnabled),
+		"AGENTDOCK_BROWSER_ENABLED":                strconv.FormatBool(settings.BrowserEnabled),
+		"AGENTDOCK_BROWSER_REUSE_EXISTING_CDP":     strconv.FormatBool(settings.BrowserReuseExistingCDP),
+		"AGENTDOCK_COMPUTER_USE_ENABLED":           strconv.FormatBool(settings.ComputerUseEnabled),
+		"AGENTDOCK_COMPUTER_USE_ALLOW_SYSTEM_KEYS": strconv.FormatBool(settings.ComputerUseEnabled && settings.ComputerUseSystemKeys),
+		"AGENTDOCK_ACP_ENABLED":                    strconv.FormatBool(settings.ACPEnabled),
 	}
 	if path := strings.TrimSpace(manifest.AgentDockHome); path != "" {
 		managed["AGENTDOCK_HOME"] = filepath.Clean(path)

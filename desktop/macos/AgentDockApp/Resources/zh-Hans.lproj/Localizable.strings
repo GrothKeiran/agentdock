@@ -61,6 +61,12 @@
 "Use as default" = "设为默认";
 "Enable MCP Apps UI" = "启用 MCP Apps UI";
 "Enable browser CDP control" = "启用浏览器 CDP 控制";
+"Allow connected AI clients to control this computer" = "允许已连接的 AI 客户端控制这台电脑";
+"Also allow system-level shortcuts" = "同时允许系统级快捷键（切换应用、退出、锁屏）";
+"Computer Use grants screenshot, mouse, and keyboard access to every desktop app. Keep authentication enabled." = "Computer Use 会授予所有桌面应用的截图、鼠标和键盘权限。请始终启用身份验证。";
+"Enable Computer Use?" = "确定启用 Computer Use 吗？";
+"Connected AI clients will be able to see the desktop and control the mouse and keyboard in every app. Only continue if AgentDock authentication is configured and you trust all connected clients." = "已连接的 AI 客户端将能够查看桌面，并在所有应用中控制鼠标和键盘。仅当 AgentDock 已配置身份验证且你信任所有连接客户端时继续。";
+"Enable" = "启用";
 "Enter the CDP address to connect to." = "请输入要连接的 CDP 地址。";
 "Enter the NexusDock address and one-time pairing code." = "请填写 NexusDock 地址和一次性配对码。";
 "Enter the absolute path to an executable ACP Adapter" = "请填写可执行的 ACP Adapter 绝对路径";

@@ -134,6 +134,8 @@ func platformUpdateConfig(ctx context.Context, request ConfigUpdateRequest) erro
 		BrowserEnabled:          request.BrowserEnabled,
 		BrowserCDPURL:           request.BrowserCDPURL,
 		BrowserReuseExistingCDP: request.BrowserReuseExistingCDP,
+		ComputerUseEnabled:      request.ComputerUseEnabled,
+		ComputerUseSystemKeys:   request.ComputerUseEnabled && request.ComputerUseSystemKeys,
 		ACPEnabled:              request.ACPEnabled,
 		ACPProfiles:             acpProfiles,
 		ACPDefaultProfile:       acpDefaultProfile,

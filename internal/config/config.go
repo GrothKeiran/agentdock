@@ -48,6 +48,8 @@ type Config struct {
 	BrowserExecutablePath        string
 	BrowserCDPURL                string
 	BrowserReuseExistingCDP      bool
+	ComputerUseEnabled           bool
+	ComputerUseAllowSystemKeys   bool
 	ACPEnabled                   bool
 	ACPProfiles                  []ACPProfile
 	ACPDefaultProfile            string
@@ -81,6 +83,14 @@ func FromEnv() (Config, error) {
 		return Config{}, err
 	}
 	browserReuseExistingCDP, err := getenvBool("AGENTDOCK_BROWSER_REUSE_EXISTING_CDP", false)
+	if err != nil {
+		return Config{}, err
+	}
+	computerUseEnabled, err := getenvBool("AGENTDOCK_COMPUTER_USE_ENABLED", false)
+	if err != nil {
+		return Config{}, err
+	}
+	computerUseAllowSystemKeys, err := getenvBool("AGENTDOCK_COMPUTER_USE_ALLOW_SYSTEM_KEYS", false)
 	if err != nil {
 		return Config{}, err
 	}
@@ -155,6 +165,8 @@ func FromEnv() (Config, error) {
 		BrowserExecutablePath:        os.Getenv("AGENTDOCK_BROWSER_EXECUTABLE_PATH"),
 		BrowserCDPURL:                strings.TrimSpace(os.Getenv("AGENTDOCK_BROWSER_CDP_URL")),
 		BrowserReuseExistingCDP:      browserReuseExistingCDP,
+		ComputerUseEnabled:           computerUseEnabled,
+		ComputerUseAllowSystemKeys:   computerUseAllowSystemKeys,
 		ACPEnabled:                   acpEnabled,
 		ACPProfiles:                  acpProfiles,
 		ACPDefaultProfile:            acpDefaultProfile,
@@ -167,6 +179,9 @@ func FromEnv() (Config, error) {
 }
 
 func (c *Config) Normalize() error {
+	if !c.ComputerUseEnabled {
+		c.ComputerUseAllowSystemKeys = false
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("resolve user home for AgentDock directories: %w", err)

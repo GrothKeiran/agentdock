@@ -43,6 +43,9 @@ final class AdvancedSettingsWindowController: NSWindowController, NSTextFieldDel
     private let browserConnectionMode = NSPopUpButton(frame: .zero, pullsDown: false)
     private let browserCDPURL = NSTextField(string: "")
     private let browserStatus = NSTextField(wrappingLabelWithString: "")
+    private let computerUseEnabled = NSButton(checkboxWithTitle: L10n.text("Allow connected AI clients to control this computer"), target: nil, action: nil)
+    private let computerUseSystemKeys = NSButton(checkboxWithTitle: L10n.text("Also allow system-level shortcuts"), target: nil, action: nil)
+    private let computerUseWarning = NSTextField(wrappingLabelWithString: L10n.text("Computer Use grants screenshot, mouse, and keyboard access to every desktop app. Keep authentication enabled."))
     private let acpEnabled = NSButton(checkboxWithTitle: L10n.text("Enable Coding Agent"), target: nil, action: nil)
     private let acpProfileList = NSStackView()
     private let acpOverviewContainer = NSStackView()
@@ -67,6 +70,8 @@ final class AdvancedSettingsWindowController: NSWindowController, NSTextFieldDel
     private var initialBrowserEnabled = false
     private var initialBrowserCDPURL = ""
     private var initialBrowserConnectionMode = BrowserConnectionMode.managed
+    private var initialComputerUseEnabled = false
+    private var initialComputerUseSystemKeys = false
     private var initialACPEnabled = false
     private var initialACPProfiles: [ACPProfileConfiguration] = []
     private var initialACPDefaultProfile = ""
@@ -132,6 +137,8 @@ final class AdvancedSettingsWindowController: NSWindowController, NSTextFieldDel
             cdpURL: configuration.browserCDPURL,
             reuseExisting: configuration.browserReuseExistingCDP
         )
+        initialComputerUseEnabled = configuration.computerUseEnabled
+        initialComputerUseSystemKeys = configuration.computerUseEnabled && configuration.computerUseAllowSystemKeys
         initialACPEnabled = configuration.acpEnabled
         initialACPProfiles = configuration.acpProfiles
         initialACPDefaultProfile = configuration.acpDefaultProfile
@@ -146,6 +153,8 @@ final class AdvancedSettingsWindowController: NSWindowController, NSTextFieldDel
         browserEnabled.state = initialBrowserEnabled ? .on : .off
         browserCDPURL.stringValue = initialBrowserCDPURL
         selectBrowserConnectionMode(initialBrowserConnectionMode)
+        computerUseEnabled.state = initialComputerUseEnabled ? .on : .off
+        computerUseSystemKeys.state = initialComputerUseEnabled && initialComputerUseSystemKeys ? .on : .off
         acpEnabled.state = initialACPEnabled ? .on : .off
         refreshACPProfileOverview()
         nexusPairingCode.stringValue = ""
@@ -239,6 +248,14 @@ final class AdvancedSettingsWindowController: NSWindowController, NSTextFieldDel
         browserStatus.textColor = .secondaryLabelColor
         browserStatus.font = .systemFont(ofSize: 12)
 
+        computerUseEnabled.target = self
+        computerUseEnabled.action = #selector(computerUseChanged)
+        computerUseSystemKeys.target = self
+        computerUseSystemKeys.action = #selector(markChanged)
+        computerUseSystemKeys.isEnabled = computerUseEnabled.state == .on
+        computerUseWarning.textColor = .systemOrange
+        computerUseWarning.font = .systemFont(ofSize: 12)
+
         acpEnabled.target = self
         acpEnabled.action = #selector(acpChanged)
 
@@ -324,6 +341,12 @@ final class AdvancedSettingsWindowController: NSWindowController, NSTextFieldDel
         cdpRow.widthAnchor.constraint(equalTo: browserStack.widthAnchor).isActive = true
         browserStatus.widthAnchor.constraint(equalTo: browserStack.widthAnchor).isActive = true
 
+        let computerUseStack = NSStackView(views: [computerUseEnabled, computerUseWarning, computerUseSystemKeys])
+        computerUseStack.orientation = .vertical
+        computerUseStack.alignment = .leading
+        computerUseStack.spacing = 7
+        computerUseWarning.widthAnchor.constraint(equalTo: computerUseStack.widthAnchor).isActive = true
+
         let defaultProfileRow = formRow(title: L10n.text("Default ACP"), control: acpDefaultProfileMenu)
         acpOverviewContainer.setViews([defaultProfileRow, acpProfileList, acpAddCustomProfile], in: .top)
         acpOverviewContainer.orientation = .vertical
@@ -391,6 +414,9 @@ final class AdvancedSettingsWindowController: NSWindowController, NSTextFieldDel
             sectionTitle(L10n.text("Browser")),
             browserStack,
             separator(),
+            sectionTitle("Computer Use"),
+            computerUseStack,
+            separator(),
             sectionTitle("Nexus"),
             nexusStack,
             separator(),
@@ -406,7 +432,7 @@ final class AdvancedSettingsWindowController: NSWindowController, NSTextFieldDel
         for separator in root.arrangedSubviews.compactMap({ $0 as? NSBox }) {
             separator.widthAnchor.constraint(equalTo: root.widthAnchor).isActive = true
         }
-        for section in [startupStack, serviceForm, browserStack, acpStack, nexusStack, utilityRow, actionRow] {
+        for section in [startupStack, serviceForm, browserStack, computerUseStack, acpStack, nexusStack, utilityRow, actionRow] {
             section.widthAnchor.constraint(equalTo: root.widthAnchor).isActive = true
         }
 
@@ -479,6 +505,14 @@ final class AdvancedSettingsWindowController: NSWindowController, NSTextFieldDel
     }
 
     @objc private func markChanged() {
+        refreshApplyState()
+    }
+
+    @objc private func computerUseChanged() {
+        if computerUseEnabled.state == .off {
+            computerUseSystemKeys.state = .off
+        }
+        computerUseSystemKeys.isEnabled = !controlsLocked && computerUseEnabled.state == .on
         refreshApplyState()
     }
 
@@ -784,6 +818,15 @@ final class AdvancedSettingsWindowController: NSWindowController, NSTextFieldDel
             showStatus(L10n.text("A CDP address is required when “Connect to a specified CDP browser” is selected."), isError: true)
             return
         }
+        if computerUseEnabled.state == .on, !initialComputerUseEnabled {
+            let warning = NSAlert()
+            warning.messageText = L10n.text("Enable Computer Use?")
+            warning.informativeText = L10n.text("Connected AI clients will be able to see the desktop and control the mouse and keyboard in every app. Only continue if AgentDock authentication is configured and you trust all connected clients.")
+            warning.alertStyle = .warning
+            warning.addButton(withTitle: L10n.text("Enable"))
+            warning.addButton(withTitle: L10n.text("Cancel"))
+            guard warning.runModal() == .alertFirstButtonReturn else { return }
+        }
         let settings = EditableServiceSettings(
             port: portField.integerValue,
             logLevel: logLevel.titleOfSelectedItem ?? "info",
@@ -791,6 +834,8 @@ final class AdvancedSettingsWindowController: NSWindowController, NSTextFieldDel
             browserEnabled: browserEnabled.state == .on,
             browserCDPURL: browserMode == .specifiedCDP ? configuredCDP : "",
             browserReuseExistingCDP: browserMode == .reuseExisting,
+            computerUseEnabled: computerUseEnabled.state == .on,
+            computerUseAllowSystemKeys: computerUseSystemKeys.state == .on,
             acpEnabled: acpEnabled.state == .on,
             acpProfiles: acpProfiles,
             acpDefaultProfile: acpDefaultProfile
@@ -820,6 +865,8 @@ final class AdvancedSettingsWindowController: NSWindowController, NSTextFieldDel
                     cdpURL: validatedSettings.browserCDPURL,
                     reuseExisting: validatedSettings.browserReuseExistingCDP
                 )
+                initialComputerUseEnabled = validatedSettings.computerUseEnabled
+                initialComputerUseSystemKeys = validatedSettings.computerUseEnabled && validatedSettings.computerUseAllowSystemKeys
                 initialACPEnabled = validatedSettings.acpEnabled
                 initialACPProfiles = validatedSettings.acpProfiles
                 initialACPDefaultProfile = validatedSettings.acpDefaultProfile
@@ -831,6 +878,8 @@ final class AdvancedSettingsWindowController: NSWindowController, NSTextFieldDel
                 mcpAppsEnabled.state = initialMCPAppsEnabled ? .on : .off
                 browserCDPURL.stringValue = initialBrowserCDPURL
                 selectBrowserConnectionMode(initialBrowserConnectionMode)
+                computerUseEnabled.state = initialComputerUseEnabled ? .on : .off
+                computerUseSystemKeys.state = initialComputerUseSystemKeys ? .on : .off
                 if let updatedConfiguration = ServiceConfiguration.load(from: service.paths.environment) {
                     currentConfiguration = updatedConfiguration
                 }
@@ -1065,6 +1114,8 @@ final class AdvancedSettingsWindowController: NSWindowController, NSTextFieldDel
             || (browserEnabled.state == .on) != initialBrowserEnabled
             || browserMode != initialBrowserConnectionMode
             || browserCDP != initialBrowserCDPURL
+            || (computerUseEnabled.state == .on) != initialComputerUseEnabled
+            || (computerUseSystemKeys.state == .on) != initialComputerUseSystemKeys
             || acpSettingsChanged
         applyButton.isEnabled = changed
         nexusPairButton.isEnabled = !controlsLocked
@@ -1075,9 +1126,10 @@ final class AdvancedSettingsWindowController: NSWindowController, NSTextFieldDel
     private func setBusy(_ busy: Bool) {
         isBusy = busy
         let locked = controlsLocked
-        for control in [languagePreference, serviceAutostart, menuAutostart, portField, logLevel, mcpAppsEnabled, browserEnabled, browserConnectionMode, browserCDPURL, acpEnabled, acpDefaultProfileMenu, acpAddCustomProfile, nexusEndpoint, nexusPairingCode, nexusPairButton] {
+        for control in [languagePreference, serviceAutostart, menuAutostart, portField, logLevel, mcpAppsEnabled, browserEnabled, browserConnectionMode, browserCDPURL, computerUseEnabled, computerUseSystemKeys, acpEnabled, acpDefaultProfileMenu, acpAddCustomProfile, nexusEndpoint, nexusPairingCode, nexusPairButton] {
             control.isEnabled = !locked
         }
+        computerUseSystemKeys.isEnabled = !locked && computerUseEnabled.state == .on
         refreshACPProfileOverview()
         refreshBrowserStatus()
         cancelButton.isEnabled = !busy

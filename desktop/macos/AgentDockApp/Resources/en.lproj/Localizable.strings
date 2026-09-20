@@ -61,6 +61,12 @@
 "Use as default" = "Use as default";
 "Enable MCP Apps UI" = "Enable MCP Apps UI";
 "Enable browser CDP control" = "Enable browser CDP control";
+"Allow connected AI clients to control this computer" = "Allow connected AI clients to control this computer";
+"Also allow system-level shortcuts" = "Also allow system-level shortcuts (app switching, quitting, locking)";
+"Computer Use grants screenshot, mouse, and keyboard access to every desktop app. Keep authentication enabled." = "Computer Use grants screenshot, mouse, and keyboard access to every desktop app. Keep authentication enabled.";
+"Enable Computer Use?" = "Enable Computer Use?";
+"Connected AI clients will be able to see the desktop and control the mouse and keyboard in every app. Only continue if AgentDock authentication is configured and you trust all connected clients." = "Connected AI clients will be able to see the desktop and control the mouse and keyboard in every app. Only continue if AgentDock authentication is configured and you trust all connected clients.";
+"Enable" = "Enable";
 "Enter the CDP address to connect to." = "Enter the CDP address to connect to.";
 "Enter the NexusDock address and one-time pairing code." = "Enter the NexusDock address and one-time pairing code.";
 "Enter the absolute path to an executable ACP Adapter" = "Enter the absolute path to an executable ACP Adapter";

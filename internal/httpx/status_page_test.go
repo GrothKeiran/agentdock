@@ -13,6 +13,7 @@ func TestStatusPageRendersConnectionAndResourceLinks(t *testing.T) {
 	cfg.OAuthEnabled = true
 	cfg.ACPEnabled = true
 	cfg.BrowserEnabled = true
+	cfg.ComputerUseEnabled = true
 	cfg.NexusEndpoint = "http://127.0.0.1:18777"
 
 	response := httptest.NewRecorder()
@@ -48,6 +49,7 @@ func TestStatusPageRendersConnectionAndResourceLinks(t *testing.T) {
 		`class="resource resource-documentation"`,
 		">OAuth<",
 		">Enabled<",
+		">Computer Use<",
 		"navigator.clipboard.writeText",
 	} {
 		if !strings.Contains(body, expected) {

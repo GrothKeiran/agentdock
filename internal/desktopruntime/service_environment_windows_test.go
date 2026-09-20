@@ -46,12 +46,31 @@ func TestLoadControlPanelSettingsValidatesOAuthAccessTokenTTL(t *testing.T) {
 	if !settings.MCPAppsEnabled {
 		t.Fatal("legacy settings without mcp_apps_enabled should default MCP Apps UI to enabled")
 	}
+	if settings.ComputerUseEnabled || settings.ComputerUseSystemKeys {
+		t.Fatalf("legacy settings unexpectedly enabled Computer Use: %#v", settings)
+	}
 
 	if err := os.WriteFile(settingsPath, []byte(`{"port":8765,"log_level":"info","oauth_access_token_ttl":"59s"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := loadControlPanelSettings(root, 8765); err == nil {
 		t.Fatal("loadControlPanelSettings() accepted invalid OAuth access token TTL")
+	}
+}
+
+func TestLoadControlPanelSettingsPreservesComputerUseAuthorization(t *testing.T) {
+	root := t.TempDir()
+	settingsPath := filepath.Join(root, "control-panel-settings.json")
+	content := []byte(`{"port":8765,"log_level":"info","computer_use_enabled":true,"computer_use_allow_system_keys":true}`)
+	if err := os.WriteFile(settingsPath, content, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	settings, err := loadControlPanelSettings(root, 8765)
+	if err != nil {
+		t.Fatalf("loadControlPanelSettings() error = %v", err)
+	}
+	if !settings.ComputerUseEnabled || !settings.ComputerUseSystemKeys {
+		t.Fatalf("Computer Use settings were not preserved: %#v", settings)
 	}
 }
 

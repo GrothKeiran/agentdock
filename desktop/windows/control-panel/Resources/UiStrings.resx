@@ -162,6 +162,21 @@
   <data name="EnableBrowserCdp" xml:space="preserve">
     <value>Enable browser CDP control</value>
   </data>
+  <data name="ComputerUse" xml:space="preserve">
+    <value>Computer Use</value>
+  </data>
+  <data name="EnableComputerUse" xml:space="preserve">
+    <value>Allow connected AI clients to control this computer</value>
+  </data>
+  <data name="ComputerUseWarning" xml:space="preserve">
+    <value>This grants screenshot, mouse, and keyboard access to all desktop apps through AgentDock MCP. Keep authentication enabled.</value>
+  </data>
+  <data name="AllowSystemKeys" xml:space="preserve">
+    <value>Also allow system-level shortcuts (app switching, quitting, locking)</value>
+  </data>
+  <data name="ComputerUseConsent" xml:space="preserve">
+    <value>Enable Computer Use? Connected AI clients will be able to see the desktop and control the mouse and keyboard in every app. Only continue if AgentDock authentication is configured and you trust all connected clients.</value>
+  </data>
   <data name="ConnectionMode" xml:space="preserve">
     <value>Connection mode</value>
   </data>

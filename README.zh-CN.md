@@ -150,7 +150,13 @@ AgentDock 可以选择作为 ACP Client 原生托管本地 Coding Agent adapter�
 - 页面跳转、点击、输入、选择和等待
 - 页面文本、可交互元素、错误和网络响应检查
 - 登录状态、持久化浏览器 Profile 和截图
-- macOS 系统 Chrome 与桌面自动化支持
+- 可显式启用原生 Computer Use，让已认证的 MCP 客户端查看交互式桌面并批量执行鼠标、键盘动作
+- 每次桌面动作都绑定最新截图 ID，拒绝陈旧坐标；切换应用、退出、锁屏等系统级快捷键默认独立禁用
+- Windows 使用无外部依赖的原生截图与输入，macOS 使用系统自动化，Linux 使用本机桌面命令适配
+
+Computer Use 默认关闭。设置 `AGENTDOCK_COMPUTER_USE_ENABLED=true`（或启动参数 `--computer-use-enabled`）并重启 AgentDock 后启用；只有连接端确实需要切换应用、退出、锁屏等快捷键时，才设置 `AGENTDOCK_COMPUTER_USE_ALLOW_SYSTEM_KEYS=true`。重启后请重新连接 MCP，或在网页端新建对话，让客户端刷新工具列表。客户端随后通过 `computer_apps`、`computer_snapshot` 和 `computer_act` 操作；截图会直接作为 MCP 图片内容返回，因此网页客户端不需要访问本机文件系统。对 localhost 以外开放 `/mcp` 前必须保持 Token 或 OAuth 鉴权。
+
+Windows 运行在交互式用户会话内，无额外运行时依赖。macOS 首次使用时需按系统提示向 AgentDock 进程授予“屏幕录制”和“辅助功能/自动化”权限。Linux 输入依赖 `xdotool`；窗口清单优先使用 `wmctrl`，缺失时回退到 `xdotool`；截图可使用 `grim`、`gnome-screenshot`、`scrot`、ImageMagick `import`，或依赖较少的 X11 `xwd` 回退。`xdotool` 输入主要适用于 X11，Wayland 能力取决于桌面合成器。
 
 ### 可恢复任务
 

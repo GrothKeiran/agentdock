@@ -40,6 +40,7 @@ type statusPageText struct {
 	Tools             string
 	MCPReady          string
 	Browser           string
+	ComputerUse       string
 	Auth              string
 	Enabled           string
 	Disabled          string
@@ -75,6 +76,7 @@ var statusPageEnglish = statusPageText{
 	Tools:             "Tools",
 	MCPReady:          "Ready",
 	Browser:           "Browser",
+	ComputerUse:       "Computer Use",
 	Auth:              "Auth",
 	Enabled:           "Enabled",
 	Disabled:          "Disabled",
@@ -110,6 +112,7 @@ var statusPageChinese = statusPageText{
 	Tools:             "工具",
 	MCPReady:          "就绪",
 	Browser:           "浏览器",
+	ComputerUse:       "Computer Use",
 	Auth:              "鉴权",
 	Enabled:           "已启用",
 	Disabled:          "未启用",
@@ -134,23 +137,25 @@ var statusPageChinese = statusPageText{
 }
 
 type statusPageData struct {
-	Text             statusPageText
-	Version          string
-	Platform         string
-	ToolCount        int
-	MCPEndpoint      string
-	ACPEnabled       bool
-	ACPStatus        string
-	RecallEnabled    bool
-	RecallStatus     string
-	BrowserEnabled   bool
-	BrowserStatus    string
-	AuthEnabled      bool
-	AuthStatus       string
-	RepositoryURL    string
-	DocumentationURL string
-	QQGroup          string
-	QQGroupURL       string
+	Text               statusPageText
+	Version            string
+	Platform           string
+	ToolCount          int
+	MCPEndpoint        string
+	ACPEnabled         bool
+	ACPStatus          string
+	RecallEnabled      bool
+	RecallStatus       string
+	BrowserEnabled     bool
+	BrowserStatus      string
+	ComputerUseEnabled bool
+	ComputerUseStatus  string
+	AuthEnabled        bool
+	AuthStatus         string
+	RepositoryURL      string
+	DocumentationURL   string
+	QQGroup            string
+	QQGroupURL         string
 }
 
 func statusPageHandler(server *mcp.Server, cfg config.Config) http.HandlerFunc {
@@ -170,23 +175,25 @@ func statusPageHandler(server *mcp.Server, cfg config.Config) http.HandlerFunc {
 		recallEnabled := strings.TrimSpace(cfg.NexusEndpoint) != ""
 		authEnabled := cfg.AuthRequired()
 		data := statusPageData{
-			Text:             text,
-			Version:          build.Version,
-			Platform:         build.Platform,
-			ToolCount:        len(server.ToolNames()),
-			MCPEndpoint:      issuerFor(cfg, r) + "/mcp",
-			ACPEnabled:       cfg.ACPEnabled,
-			ACPStatus:        enabledLabel(text, cfg.ACPEnabled),
-			RecallEnabled:    recallEnabled,
-			RecallStatus:     enabledLabel(text, recallEnabled),
-			BrowserEnabled:   cfg.BrowserEnabled,
-			BrowserStatus:    enabledLabel(text, cfg.BrowserEnabled),
-			AuthEnabled:      authEnabled,
-			AuthStatus:       authLabel(text, cfg),
-			RepositoryURL:    agentDockRepositoryURL,
-			DocumentationURL: text.DocumentationURL,
-			QQGroup:          agentDockQQGroup,
-			QQGroupURL:       agentDockQQGroupURL,
+			Text:               text,
+			Version:            build.Version,
+			Platform:           build.Platform,
+			ToolCount:          len(server.ToolNames()),
+			MCPEndpoint:        issuerFor(cfg, r) + "/mcp",
+			ACPEnabled:         cfg.ACPEnabled,
+			ACPStatus:          enabledLabel(text, cfg.ACPEnabled),
+			RecallEnabled:      recallEnabled,
+			RecallStatus:       enabledLabel(text, recallEnabled),
+			BrowserEnabled:     cfg.BrowserEnabled,
+			BrowserStatus:      enabledLabel(text, cfg.BrowserEnabled),
+			ComputerUseEnabled: cfg.ComputerUseEnabled,
+			ComputerUseStatus:  enabledLabel(text, cfg.ComputerUseEnabled),
+			AuthEnabled:        authEnabled,
+			AuthStatus:         authLabel(text, cfg),
+			RepositoryURL:      agentDockRepositoryURL,
+			DocumentationURL:   text.DocumentationURL,
+			QQGroup:            agentDockQQGroup,
+			QQGroupURL:         agentDockQQGroupURL,
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")

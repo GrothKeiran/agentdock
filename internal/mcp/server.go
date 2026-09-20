@@ -274,13 +274,15 @@ func toolEnvelope(name string, structured any, err error) map[string]any {
 		}
 		return map[string]any{"isError": true, "structuredContent": payload, "content": []map[string]any{{"type": "text", "text": pretty(payload)}}}
 	}
-	if name == "view_image" {
-		payload := asMap(structured)
-		if data, _ := payload["_mcp_image_base64"].(string); data != "" {
-			mimeType, _ := payload["_mcp_image_mime_type"].(string)
-			clean := cloneWithoutInternalImage(payload)
-			return map[string]any{"isError": false, "structuredContent": clean, "content": []map[string]any{{"type": "image", "data": data, "mimeType": mimeType}}}
+	payload := asMap(structured)
+	if data, _ := payload["_mcp_image_base64"].(string); data != "" {
+		mimeType, _ := payload["_mcp_image_mime_type"].(string)
+		clean := cloneWithoutInternalImage(payload)
+		content := []map[string]any{{"type": "image", "data": data, "mimeType": mimeType}}
+		if name != "view_image" {
+			content = append([]map[string]any{{"type": "text", "text": pretty(clean)}}, content...)
 		}
+		return map[string]any{"isError": false, "structuredContent": clean, "content": content}
 	}
 	if name == "mcp_tool_call" {
 		return dynamicMCPToolEnvelope(structured)

@@ -24,6 +24,8 @@ type ConfigUpdateRequest struct {
 	BrowserEnabled          bool
 	BrowserCDPURL           string
 	BrowserReuseExistingCDP bool
+	ComputerUseEnabled      bool
+	ComputerUseSystemKeys   bool
 	ACPEnabled              bool
 	ACPProfiles             []agentconfig.ACPProfile
 	ACPDefaultProfile       string
@@ -45,6 +47,8 @@ func RunConfigCommand(ctx context.Context, args []string, stdout, stderr io.Writ
 		browserEnabled := flags.Bool("browser-enabled", false, "启用浏览器")
 		browserCDPURL := flags.String("browser-cdp-url", "", "已有 Chromium CDP 地址")
 		browserReuseExistingCDP := flags.Bool("browser-reuse-existing-cdp", false, "自动发现并复用唯一已有 CDP")
+		computerUseEnabled := flags.Bool("computer-use-enabled", false, "启用本机 Computer Use")
+		computerUseSystemKeys := flags.Bool("computer-use-allow-system-keys", false, "允许 Computer Use 使用系统级快捷键")
 		acpEnabled := flags.Bool("acp-enabled", false, "启用 Coding Agent")
 		acpProfilesJSON := flags.String("acp-profiles-json", "", "多个 ACP Profile 的 JSON 数组")
 		acpDefaultProfile := flags.String("acp-default-profile", "", "默认 ACP Profile ID")
@@ -85,6 +89,8 @@ func RunConfigCommand(ctx context.Context, args []string, stdout, stderr io.Writ
 			BrowserEnabled:          *browserEnabled,
 			BrowserCDPURL:           strings.TrimSpace(*browserCDPURL),
 			BrowserReuseExistingCDP: *browserReuseExistingCDP,
+			ComputerUseEnabled:      *computerUseEnabled,
+			ComputerUseSystemKeys:   *computerUseSystemKeys,
 			ACPEnabled:              *acpEnabled,
 			ACPProfiles:             acpProfiles,
 			ACPDefaultProfile:       strings.TrimSpace(*acpDefaultProfile),

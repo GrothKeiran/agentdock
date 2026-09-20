@@ -58,6 +58,8 @@ func runServer(ctx context.Context, args []string, stderr io.Writer) error {
 	flags.StringVar(&cfg.BrowserExecutablePath, "browser-executable-path", cfg.BrowserExecutablePath, "optional absolute Chrome, Chromium, or Edge executable path")
 	flags.StringVar(&cfg.BrowserCDPURL, "browser-cdp-url", cfg.BrowserCDPURL, "optional existing Chromium CDP endpoint to attach")
 	flags.BoolVar(&cfg.BrowserReuseExistingCDP, "browser-reuse-existing-cdp", cfg.BrowserReuseExistingCDP, "discover and reuse a unique local existing CDP browser before launching one")
+	flags.BoolVar(&cfg.ComputerUseEnabled, "computer-use-enabled", cfg.ComputerUseEnabled, "expose native local computer-control tools")
+	flags.BoolVar(&cfg.ComputerUseAllowSystemKeys, "computer-use-allow-system-keys", cfg.ComputerUseAllowSystemKeys, "allow system-level key combinations such as app switching and locking")
 	flags.BoolVar(&cfg.Stdio, "stdio", cfg.Stdio, "serve JSON-RPC over stdio")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -89,7 +91,7 @@ func runServer(ctx context.Context, args []string, stderr io.Writer) error {
 		// 失败不应阻断 MCP 服务启动；保留明确日志并在下次启动继续重试。
 		slog.Warn("desktop runtime repair skipped", "error", err)
 	}
-	slog.Info("server starting", "agentdock_home", cfg.AgentDockHome, "agentdock_default_dir", cfg.AgentDockDefaultDir, "path_model", config.PathModel, "host", cfg.Host, "port", cfg.Port, "stdio", cfg.Stdio, "log_level", cfg.LogLevel, "recall_enabled", cfg.NexusEndpoint != "", "nexus_enabled", cfg.NexusEndpoint != "", "mcp_apps_enabled", cfg.MCPAppsEnabled, "browser_enabled", cfg.BrowserEnabled)
+	slog.Info("server starting", "agentdock_home", cfg.AgentDockHome, "agentdock_default_dir", cfg.AgentDockDefaultDir, "path_model", config.PathModel, "host", cfg.Host, "port", cfg.Port, "stdio", cfg.Stdio, "log_level", cfg.LogLevel, "recall_enabled", cfg.NexusEndpoint != "", "nexus_enabled", cfg.NexusEndpoint != "", "mcp_apps_enabled", cfg.MCPAppsEnabled, "browser_enabled", cfg.BrowserEnabled, "computer_use_enabled", cfg.ComputerUseEnabled)
 	runtime, err := app.NewRuntime(cfg)
 	if err != nil {
 		return err

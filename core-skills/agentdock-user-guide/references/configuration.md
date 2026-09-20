@@ -15,6 +15,8 @@
 | `AGENTDOCK_BROWSER_EXECUTABLE_PATH` | 显式浏览器可执行文件 | Docker/服务器/高级运行环境 |
 | `AGENTDOCK_BROWSER_CDP_URL` | 复用已有 Chromium 的 CDP 地址 | Desktop 设置或启动环境 |
 | `AGENTDOCK_BROWSER_REUSE_EXISTING_CDP` | 自动复用唯一已发现 CDP | Desktop 设置或启动环境 |
+| `AGENTDOCK_COMPUTER_USE_ENABLED` | 是否向 MCP 客户端开放本机桌面截图、鼠标和键盘控制；默认关闭 | Desktop 设置或启动环境 |
+| `AGENTDOCK_COMPUTER_USE_ALLOW_SYSTEM_KEYS` | 是否额外允许切换应用、退出、锁屏等系统级快捷键；默认关闭 | Desktop 设置或启动环境 |
 | `AGENTDOCK_COMMAND_ENV_FROM_ENV_JSON` | 显式允许 `exec_command` 从 Core 宿主环境复制的变量映射 | Linux/Docker/直接启动的高级配置 |
 | `AGENTDOCK_ACP_ENABLED` | 是否启用 ACP Client | Desktop 设置或启动环境 |
 | `AGENTDOCK_ACP_PROFILES_JSON` | 多 ACP Profile JSON 数组；每项包含 `id/kind/command/args/env_from_env/enabled` | Desktop 设置或高级启动环境 |
@@ -43,6 +45,7 @@ Coding Agent 的发现、Codex / Claude Adapter 安装、Grok stdio 模式、平
 - Linux 官方安装器默认把环境文件按 root:root、0600 写入，并通过 systemd/OpenRC 注入服务进程；不要为了方便把权限放宽。
 - Docker 的环境变量属于容器创建配置。Compose 文件或 env file 修改后，如果容器没有被重新创建，新进程可能仍使用旧的容器配置。
 - `AGENTDOCK_COMMAND_ENV_FROM_ENV_JSON` 只允许显式映射；它不会自动把登录 Shell 的全部环境传给 `exec_command`。
+- Computer Use 是整机级授权边界。启用后，已通过 AgentDock 认证的 MCP 客户端可看到交互式桌面并控制所有应用；公网连接必须保持 Token 或 OAuth 鉴权。坐标动作只接受最新截图返回的 `snapshot_id`，动作失败后必须重新截图。
 
 ## 判断“配置没生效”时
 

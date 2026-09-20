@@ -159,6 +159,46 @@ func TestAgentDockContextExposesShortACPOrientationWhenEnabled(t *testing.T) {
 	}
 }
 
+func TestAgentDockContextExposesComputerUseSafetyRuleOnlyWhenEnabled(t *testing.T) {
+	for _, testCase := range []struct {
+		name    string
+		enabled bool
+	}{
+		{name: "disabled", enabled: false},
+		{name: "enabled", enabled: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			cfg := config.Config{
+				AgentDockDefaultDir: t.TempDir(),
+				AgentDockHome:       filepath.Join(t.TempDir(), ".agentdock"),
+				ComputerUseEnabled:  testCase.enabled,
+			}
+			if err := cfg.Normalize(); err != nil {
+				t.Fatal(err)
+			}
+			rt, err := NewRuntime(cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = rt.Close() })
+			result, err := rt.Call(context.Background(), "agentdock_context", map[string]any{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got capabilityContext
+			if err := remarshal(result, &got); err != nil {
+				t.Fatal(err)
+			}
+			rules := strings.Join(got.Rules, "\n")
+			for _, marker := range []string{"computer_snapshot", "snapshot_id", "computer_act"} {
+				if strings.Contains(rules, marker) != testCase.enabled {
+					t.Fatalf("Computer Use rule marker %q enabled=%v rules=%s", marker, testCase.enabled, rules)
+				}
+			}
+		})
+	}
+}
+
 func TestNexusUnavailableHidesWorkflowTemplateCapability(t *testing.T) {
 	cfg := config.Config{
 		AgentDockDefaultDir: t.TempDir(),

@@ -232,6 +232,14 @@
               </Grid>
             </GroupBox>
 
+            <GroupBox Header="{local:Loc ComputerUse}">
+              <StackPanel>
+                <CheckBox x:Name="ComputerUseEnabledCheckBox" Content="{local:Loc EnableComputerUse}" Margin="0,4,0,8" Unchecked="ComputerUseEnabledCheckBox_Unchecked" />
+                <TextBlock Text="{local:Loc ComputerUseWarning}" Foreground="#B54708" TextWrapping="Wrap" Margin="22,0,0,10" />
+                <CheckBox x:Name="ComputerUseSystemKeysCheckBox" Content="{local:Loc AllowSystemKeys}" Margin="22,0,0,4" IsEnabled="{Binding IsChecked, ElementName=ComputerUseEnabledCheckBox}" />
+              </StackPanel>
+            </GroupBox>
+
             <GroupBox Header="{local:Loc CodingAgentAcp}">
               <StackPanel>
                 <CheckBox x:Name="AcpEnabledCheckBox" Content="{local:Loc EnableCodingAgent}" Margin="0,4,0,14" />

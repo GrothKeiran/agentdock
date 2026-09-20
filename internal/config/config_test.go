@@ -35,6 +35,21 @@ func TestNormalizeDefaultsToUserDirectories(t *testing.T) {
 	}
 }
 
+func TestNormalizeClearsSystemKeyAuthorizationWhenComputerUseIsDisabled(t *testing.T) {
+	root := t.TempDir()
+	cfg := Config{
+		AgentDockHome:              filepath.Join(root, ".agentdock"),
+		AgentDockDefaultDir:        filepath.Join(root, "workspace"),
+		ComputerUseAllowSystemKeys: true,
+	}
+	if err := cfg.Normalize(); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.ComputerUseAllowSystemKeys {
+		t.Fatal("system-key authorization remained enabled while Computer Use is disabled")
+	}
+}
+
 func TestFromEnvParsesCommandEnvironmentMapping(t *testing.T) {
 	t.Setenv("AGENTDOCK_COMMAND_ENV_FROM_ENV_JSON", `{"NIX_LD":"NIX_LD","CHILD_TOKEN":"HOST_TOKEN"}`)
 
@@ -249,6 +264,8 @@ func TestFromEnvRejectsInvalidTypedValues(t *testing.T) {
 		{name: "port", key: "AGENTDOCK_PORT", value: "not-a-number"},
 		{name: "browser enabled", key: "AGENTDOCK_BROWSER_ENABLED", value: "sometimes"},
 		{name: "browser reuse existing cdp", key: "AGENTDOCK_BROWSER_REUSE_EXISTING_CDP", value: "sometimes"},
+		{name: "computer use enabled", key: "AGENTDOCK_COMPUTER_USE_ENABLED", value: "sometimes"},
+		{name: "computer use system keys", key: "AGENTDOCK_COMPUTER_USE_ALLOW_SYSTEM_KEYS", value: "sometimes"},
 		{name: "oauth enabled", key: "AGENTDOCK_OAUTH_ENABLED", value: "enabled"},
 		{name: "oauth access token ttl", key: "AGENTDOCK_OAUTH_ACCESS_TOKEN_TTL", value: "one-day"},
 		{name: "stdio", key: "AGENTDOCK_STDIO", value: "enabled"},
@@ -258,6 +275,8 @@ func TestFromEnvRejectsInvalidTypedValues(t *testing.T) {
 			t.Setenv("AGENTDOCK_PORT", "")
 			t.Setenv("AGENTDOCK_BROWSER_ENABLED", "")
 			t.Setenv("AGENTDOCK_BROWSER_REUSE_EXISTING_CDP", "")
+			t.Setenv("AGENTDOCK_COMPUTER_USE_ENABLED", "")
+			t.Setenv("AGENTDOCK_COMPUTER_USE_ALLOW_SYSTEM_KEYS", "")
 			t.Setenv("AGENTDOCK_OAUTH_ENABLED", "")
 			t.Setenv("AGENTDOCK_OAUTH_ACCESS_TOKEN_TTL", "")
 			t.Setenv("AGENTDOCK_STDIO", "")
@@ -277,6 +296,8 @@ func TestFromEnvParsesTypedValues(t *testing.T) {
 	t.Setenv("AGENTDOCK_BROWSER_EXECUTABLE_PATH", browserPath)
 	t.Setenv("AGENTDOCK_BROWSER_CDP_URL", "http://127.0.0.1:9222")
 	t.Setenv("AGENTDOCK_BROWSER_REUSE_EXISTING_CDP", "true")
+	t.Setenv("AGENTDOCK_COMPUTER_USE_ENABLED", "true")
+	t.Setenv("AGENTDOCK_COMPUTER_USE_ALLOW_SYSTEM_KEYS", "true")
 	t.Setenv("AGENTDOCK_OAUTH_ENABLED", "true")
 	t.Setenv("AGENTDOCK_OAUTH_ACCESS_TOKEN_TTL", "24h")
 	t.Setenv("AGENTDOCK_STDIO", "1")
@@ -284,7 +305,7 @@ func TestFromEnvParsesTypedValues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FromEnv() error = %v", err)
 	}
-	if cfg.Port != 9876 || !cfg.BrowserEnabled || !cfg.OAuthEnabled || !cfg.Stdio || cfg.OAuthAccessTokenTTLSeconds != int64(24*time.Hour/time.Second) ||
+	if cfg.Port != 9876 || !cfg.BrowserEnabled || !cfg.ComputerUseEnabled || !cfg.ComputerUseAllowSystemKeys || !cfg.OAuthEnabled || !cfg.Stdio || cfg.OAuthAccessTokenTTLSeconds != int64(24*time.Hour/time.Second) ||
 		cfg.BrowserExecutablePath != browserPath || cfg.BrowserCDPURL != "http://127.0.0.1:9222" || !cfg.BrowserReuseExistingCDP {
 		t.Fatalf("config = %#v", cfg)
 	}

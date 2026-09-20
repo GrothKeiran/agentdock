@@ -397,6 +397,8 @@ public sealed class RuntimeService : IDisposable
             $"--browser-enabled={settings.BrowserEnabled.ToString().ToLowerInvariant()}",
             "--browser-cdp-url", settings.BrowserCdpUrl ?? "",
             $"--browser-reuse-existing-cdp={settings.BrowserReuseExistingCdp.ToString().ToLowerInvariant()}",
+            $"--computer-use-enabled={settings.ComputerUseEnabled.ToString().ToLowerInvariant()}",
+            $"--computer-use-allow-system-keys={settings.ComputerUseAllowSystemKeys.ToString().ToLowerInvariant()}",
             $"--acp-enabled={settings.AcpEnabled.ToString().ToLowerInvariant()}",
             "--acp-profiles-json", JsonSerializer.Serialize(settings.AcpProfiles ?? []),
             "--acp-default-profile", settings.AcpDefaultProfile ?? ""

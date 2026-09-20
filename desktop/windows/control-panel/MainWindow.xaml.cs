@@ -146,6 +146,8 @@ public partial class MainWindow : Window
                 BrowserEnabledCheckBox.IsChecked = snapshot.Settings.BrowserEnabled;
                 BrowserCdpUrlTextBox.Text = snapshot.Settings.BrowserCdpUrl;
                 SelectBrowserConnectionMode(snapshot.Settings);
+                ComputerUseEnabledCheckBox.IsChecked = snapshot.Settings.ComputerUseEnabled;
+                ComputerUseSystemKeysCheckBox.IsChecked = snapshot.Settings.ComputerUseEnabled && snapshot.Settings.ComputerUseAllowSystemKeys;
                 AcpEnabledCheckBox.IsChecked = snapshot.Settings.AcpEnabled;
                 _acpProfiles = snapshot.Settings.AcpProfiles.Select(CloneAcpProfile).ToList();
                 _acpDefaultProfile = snapshot.Settings.AcpDefaultProfile;
@@ -578,6 +580,11 @@ public partial class MainWindow : Window
         RefreshBrowserConnectionUi();
     }
 
+    private void ComputerUseEnabledCheckBox_Unchecked(object sender, RoutedEventArgs e)
+    {
+        ComputerUseSystemKeysCheckBox.IsChecked = false;
+    }
+
     private void RefreshBrowserConnectionUi()
     {
         var mode = SelectedBrowserConnectionMode();
@@ -861,10 +868,20 @@ public partial class MainWindow : Window
             BrowserEnabled = BrowserEnabledCheckBox.IsChecked == true,
             BrowserCdpUrl = browserConnectionMode == BrowserConnectionSpecified ? browserCdpUrl : "",
             BrowserReuseExistingCdp = browserConnectionMode == BrowserConnectionReuse,
+            ComputerUseEnabled = ComputerUseEnabledCheckBox.IsChecked == true,
+            ComputerUseAllowSystemKeys = ComputerUseEnabledCheckBox.IsChecked == true && ComputerUseSystemKeysCheckBox.IsChecked == true,
             AcpEnabled = acpEnabled,
             AcpProfiles = _acpProfiles.Select(CloneAcpProfile).ToList(),
             AcpDefaultProfile = _acpDefaultProfile
         };
+        if (settings.ComputerUseEnabled && _snapshot?.Settings.ComputerUseEnabled != true)
+        {
+            var consent = MessageBox.Show(this, UiText.Get("ComputerUseConsent"), "AgentDock", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (consent != MessageBoxResult.Yes)
+            {
+                return;
+            }
+        }
         var saved = await ExecuteActionAsync(
             UiText.Get("SavingAndRestarting"),
             () => _runtime.SaveSettingsAsync(settings),
