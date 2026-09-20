@@ -738,9 +738,15 @@ function Start-AgentDockTask {
     if (-not [string]::IsNullOrWhiteSpace($ExpectedUserSid)) {
         $arguments += @('--expected-user-sid', $ExpectedUserSid)
     }
-    & $AgentDockBinary @arguments | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "AgentDock native task-start failed with exit code $LASTEXITCODE."
+    $taskStartOutput = @(& $AgentDockBinary @arguments 2>&1)
+    $taskStartExitCode = $LASTEXITCODE
+    if ($taskStartExitCode -ne 0) {
+        $diagnostic = (($taskStartOutput | ForEach-Object { $_.ToString() }) -join [Environment]::NewLine).Trim()
+        $message = "AgentDock native task-start failed with exit code $taskStartExitCode."
+        if (-not [string]::IsNullOrWhiteSpace($diagnostic)) {
+            $message += "`r`n$diagnostic"
+        }
+        throw $message
     }
 }
 

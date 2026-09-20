@@ -164,9 +164,15 @@ function Start-AgentDockScheduledTask {
     if (-not (Test-Path -LiteralPath $agentDockBinary -PathType Leaf)) {
         throw "Installed AgentDock stable binary is missing: $agentDockBinary"
     }
-    & $agentDockBinary service task-start --task-name 'AgentDock' | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "AgentDock native task-start failed with exit code $LASTEXITCODE."
+    $taskStartOutput = @(& $agentDockBinary service task-start --task-name 'AgentDock' 2>&1)
+    $taskStartExitCode = $LASTEXITCODE
+    if ($taskStartExitCode -ne 0) {
+        $diagnostic = (($taskStartOutput | ForEach-Object { $_.ToString() }) -join [Environment]::NewLine).Trim()
+        $message = "AgentDock native task-start failed with exit code $taskStartExitCode."
+        if (-not [string]::IsNullOrWhiteSpace($diagnostic)) {
+            $message += "`r`n$diagnostic"
+        }
+        throw $message
     }
 }
 

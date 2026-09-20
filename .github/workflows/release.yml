@@ -794,12 +794,30 @@ jobs:
         run: |
           .\packaging\windows\sign-windows.ps1 -Path $env:PUBLISHED_SETUP -VerifyOnly
 
+      - name: Download Windows payload for legacy migration fixture
+        uses: actions/download-artifact@v4
+        with:
+          name: agentdock-windows-amd64
+          path: legacy-payload
+
+      - name: Prepare legacy migration fixture
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $PWD 'legacy-payload\agentdock_windows_amd64.zip'
+          $fixture = Join-Path $env:RUNNER_TEMP 'agentdock-legacy-fixture'
+          Expand-Archive -LiteralPath $archive -DestinationPath $fixture -Force
+          "LEGACY_CORE_PATH=$(Join-Path $fixture 'agentdock.exe')" | Out-File -FilePath $env:GITHUB_ENV -Encoding ascii -Append
+          "LEGACY_TRAY_PATH=$(Join-Path $fixture 'agentdock-tray.exe')" | Out-File -FilePath $env:GITHUB_ENV -Encoding ascii -Append
+
       - name: Install and uninstall published Setup
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           & .\scripts\test\test-windows-setup-e2e.ps1 `
             -SetupPath $env:PUBLISHED_SETUP `
+            -LegacyCorePath $env:LEGACY_CORE_PATH `
+            -LegacyTrayPath $env:LEGACY_TRAY_PATH `
             -AllowLegacyTaskMutation
 
       - name: Install and upgrade published version as standard user
