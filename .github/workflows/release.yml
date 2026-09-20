@@ -362,10 +362,16 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $path = Join-Path $PWD 'payload\cloudflared.exe'
-          Invoke-WebRequest `
-            -UseBasicParsing `
-            -Uri 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe' `
-            -OutFile $path
+          $downloadUri = 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe'
+          for ($attempt = 1; $attempt -le 5; $attempt++) {
+            try {
+              Invoke-WebRequest -UseBasicParsing -Uri $downloadUri -OutFile $path
+              break
+            } catch {
+              if ($attempt -eq 5) { throw }
+              Start-Sleep -Seconds (2 * $attempt)
+            }
+          }
           $signature = Get-AuthenticodeSignature -LiteralPath $path
           if ($signature.Status -ne [Management.Automation.SignatureStatus]::Valid) {
             throw "cloudflared Authenticode signature is invalid: $($signature.StatusMessage)"
@@ -780,6 +786,7 @@ jobs:
           "PUBLISHED_SETUP=$setup" | Out-File -FilePath $env:GITHUB_ENV -Encoding ascii -Append
 
       - name: Verify published Setup signature
+        if: github.repository == 'uvwt/agentdock'
         shell: pwsh
         env:
           WINDOWS_SIGNING_CERT_BASE64: ${{ secrets.WINDOWS_SIGNING_CERT_BASE64 }}
