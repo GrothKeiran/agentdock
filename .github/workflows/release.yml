@@ -15,6 +15,12 @@ permissions:
   contents: write
   packages: write
 
+env:
+  GOCACHE: ${{ github.workspace }}/.cache/go-build
+  GOMODCACHE: ${{ github.workspace }}/.cache/go-mod
+  GOPATH: ${{ github.workspace }}/.cache/gopath
+  NUGET_PACKAGES: ${{ github.workspace }}/.cache/nuget
+
 jobs:
   build-linux:
     name: Build Linux ${{ matrix.goarch }}
@@ -33,7 +39,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-          cache: true
+          cache: false
 
       - name: Build and package
         env:
@@ -79,7 +85,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-          cache: true
+          cache: false
 
       - name: Build and package
         env:
@@ -122,7 +128,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-          cache: true
+          cache: false
 
       - name: Download AgentDock macOS payloads
         uses: actions/download-artifact@v4
@@ -208,7 +214,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-          cache: true
+          cache: false
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -219,13 +225,19 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
+          $tempRoot = Join-Path $PWD '.cache\tmp'
+          New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+          $env:TEMP = $tempRoot
+          $env:TMP = $tempRoot
+          "TEMP=$tempRoot" >> $env:GITHUB_ENV
+          "TMP=$tempRoot" >> $env:GITHUB_ENV
           go test ./internal/envstore ./internal/fs/securepath
 
       - name: Download and validate exact installer bytes
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $downloadedInstaller = Join-Path $env:RUNNER_TEMP 'install-downloaded.ps1'
+          $downloadedInstaller = Join-Path $env:TEMP 'install-downloaded.ps1'
           $installerUrl = 'https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/scripts/install/install.ps1'
           & .\scripts\test\test-install-windows-download.ps1 `
             -Url $installerUrl `
@@ -500,6 +512,7 @@ jobs:
             dist/*.exe
             dist/*.exe.sha256
           generate_release_notes: true
+          prerelease: ${{ contains(github.event.inputs.tag || github.ref_name, '-') }}
 
   publish-container:
     name: Publish container (${{ matrix.variant }})
@@ -770,8 +783,14 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
+          $tempRoot = Join-Path $PWD '.cache\tmp'
+          New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+          $env:TEMP = $tempRoot
+          $env:TMP = $tempRoot
+          "TEMP=$tempRoot" >> $env:GITHUB_ENV
+          "TMP=$tempRoot" >> $env:GITHUB_ENV
           $tag = '${{ github.event.inputs.tag || github.ref_name }}'
-          $downloadedInstaller = Join-Path $env:RUNNER_TEMP 'install-release.ps1'
+          $downloadedInstaller = Join-Path $env:TEMP 'install-release.ps1'
           $installerUrl = "https://github.com/${{ github.repository }}/releases/download/$tag/install.ps1"
           & .\scripts\test\test-install-windows-download.ps1 `
             -Url $installerUrl `
@@ -779,7 +798,7 @@ jobs:
             -OutputPath $downloadedInstaller
           "DOWNLOADED_INSTALLER=$downloadedInstaller" | Out-File -FilePath $env:GITHUB_ENV -Encoding ascii -Append
           "RELEASE_TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Encoding ascii -Append
-          $setup = Join-Path $env:RUNNER_TEMP 'AgentDockSetup-amd64.exe'
+          $setup = Join-Path $env:TEMP 'AgentDockSetup-amd64.exe'
           Invoke-WebRequest `
             -UseBasicParsing `
             -Uri "https://github.com/${{ github.repository }}/releases/download/$tag/AgentDockSetup-amd64.exe" `
@@ -806,7 +825,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $archive = Join-Path $PWD 'legacy-payload\agentdock_windows_amd64.zip'
-          $fixture = Join-Path $env:RUNNER_TEMP 'agentdock-legacy-fixture'
+          $fixture = Join-Path $env:TEMP 'agentdock-legacy-fixture'
           Expand-Archive -LiteralPath $archive -DestinationPath $fixture -Force
           "LEGACY_CORE_PATH=$(Join-Path $fixture 'agentdock.exe')" | Out-File -FilePath $env:GITHUB_ENV -Encoding ascii -Append
           "LEGACY_TRAY_PATH=$(Join-Path $fixture 'agentdock-tray.exe')" | Out-File -FilePath $env:GITHUB_ENV -Encoding ascii -Append
@@ -829,6 +848,70 @@ jobs:
             -InstallerPath $env:DOWNLOADED_INSTALLER `
             -Version $env:RELEASE_TAG `
             -ReleaseBaseUrl "https://github.com/${{ github.repository }}/releases/download/$env:RELEASE_TAG"
+
+  verify-official-windows-upgrade:
+    name: Verify released official upgrade (${{ matrix.privilege }}, recovery=${{ matrix.recovery }})
+    needs: publish
+    if: github.repository == 'GrothKeiran/agentdock'
+    runs-on: windows-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - privilege: standard
+            recovery: false
+          - privilege: elevated
+            recovery: false
+          - privilege: standard
+            recovery: true
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - name: Download exact published packages
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $PWD '.cache\official-release-upgrade'
+          New-Item -ItemType Directory -Path $root -Force | Out-Null
+          "TEST_ROOT=$root" >> $env:GITHUB_ENV
+          "TEMP=$root" >> $env:GITHUB_ENV
+          "TMP=$root" >> $env:GITHUB_ENV
+          gh release download v0.8.3 --repo uvwt/agentdock -p AgentDockSetup-amd64.exe -D "$root\official"
+          if ($LASTEXITCODE) { throw 'Official download failed' }
+          gh release download $env:RELEASE_TAG --repo '${{ github.repository }}' -p AgentDockSetup-amd64.exe -p agentdock_windows_amd64.zip -D "$root\target"
+          if ($LASTEXITCODE) { throw 'Target download failed' }
+          if ('${{ matrix.recovery }}' -eq 'true') {
+            gh release download v0.8.3-computer-use.2 --repo '${{ github.repository }}' -p AgentDockSetup-amd64.exe -D "$root\broken"
+            if ($LASTEXITCODE) { throw 'Broken preview download failed' }
+            Expand-Archive "$root\target\agentdock_windows_amd64.zip" "$root\helper"
+          }
+      - name: Verify published upgrade and retained credentials
+        shell: powershell
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          $parameters = @{
+            LegacySetup = "$env:TEST_ROOT\official\AgentDockSetup-amd64.exe"
+            TargetSetup = "$env:TEST_ROOT\target\AgentDockSetup-amd64.exe"
+            TestRoot = $env:TEST_ROOT
+            Privilege = '${{ matrix.privilege }}'
+            ExpectedVersion = $env:RELEASE_TAG.TrimStart('v')
+          }
+          if ('${{ matrix.recovery }}' -eq 'true') {
+            $parameters.BrokenSetup = "$env:TEST_ROOT\broken\AgentDockSetup-amd64.exe"
+            $parameters.RecoveryBinary = "$env:TEST_ROOT\helper\agentdock.exe"
+          }
+          & .\scripts\test\test-windows-official-upgrade.ps1 @parameters
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: released-upgrade-${{ matrix.privilege }}-${{ matrix.recovery }}
+          path: .cache/official-release-upgrade/*.log
 
   verify-container:
     name: Verify published containers

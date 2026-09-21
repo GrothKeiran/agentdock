@@ -6,7 +6,8 @@ param(
     [switch] $ExpectFailure,
     [ValidateSet('standard', 'elevated')][string] $Privilege = 'standard',
     [string] $BrokenSetup = '',
-    [string] $RecoveryBinary = ''
+    [string] $RecoveryBinary = '',
+    [string] $ExpectedVersion = '0.8.3-computer-use.2'
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -41,7 +42,7 @@ if ($ExpectFailure) {
 }
 if ($exitCode -ne 0) { throw 'Patched Setup upgrade failed' }
 $version = & $binary version --json | ConvertFrom-Json
-if ($version.version -ne '0.8.3-computer-use.2') { throw "Unexpected target version $($version.version)" }
+if ($version.version -ne $ExpectedVersion) { throw "Unexpected target version $($version.version), expected $ExpectedVersion" }
 if ((Get-FileHash $tokenPath).Hash -ne $tokenHash) { throw 'Upgrade changed existing credential' }
 $health = Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:8765/healthz'
 if ($health.StatusCode -ne 200) { throw 'Upgraded Core not healthy' }
