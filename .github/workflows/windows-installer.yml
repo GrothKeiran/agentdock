@@ -28,14 +28,22 @@ permissions:
 
 jobs:
   official-upgrade:
-    name: Official v0.8.3 upgrade (${{ matrix.variant }})
+    name: Official v0.8.3 upgrade (${{ matrix.variant }}, ${{ matrix.privilege }})
     if: github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        variant: [baseline, patched]
+        include:
+          - variant: baseline
+            privilege: standard
+          - variant: patched
+            privilege: standard
+          - variant: recovery
+            privilege: standard
+          - variant: patched
+            privilege: elevated
     steps:
       - uses: actions/checkout@v5
       - name: Prepare real released packages
@@ -54,7 +62,7 @@ jobs:
           gh release download v0.8.3-computer-use.2 --repo GrothKeiran/agentdock -p AgentDockSetup-amd64.exe -p agentdock_windows_amd64.zip -p agentdock_windows_amd64.zip.sha256 -D "$root\preview"
           if ($LASTEXITCODE) { throw 'Preview download failed' }
       - name: Build patched Setup
-        if: matrix.variant == 'patched'
+        if: matrix.variant != 'baseline'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -67,14 +75,20 @@ jobs:
             LegacySetup = "$env:TEST_ROOT\official\AgentDockSetup-amd64.exe"
             TargetSetup = "$env:TEST_ROOT\preview\AgentDockSetup-amd64.exe"
             TestRoot = $env:TEST_ROOT
+            Privilege = '${{ matrix.privilege }}'
           }
           if ('${{ matrix.variant }}' -eq 'baseline') { $parameters.ExpectFailure = $true }
           else { $parameters.TargetSetup = "$env:TEST_ROOT\patched\AgentDockSetup-amd64.exe" }
+          if ('${{ matrix.variant }}' -eq 'recovery') {
+            Expand-Archive "$env:TEST_ROOT\preview\agentdock_windows_amd64.zip" "$env:TEST_ROOT\recovery-helper"
+            $parameters.BrokenSetup = "$env:TEST_ROOT\preview\AgentDockSetup-amd64.exe"
+            $parameters.RecoveryBinary = "$env:TEST_ROOT\recovery-helper\agentdock.exe"
+          }
           & .\scripts\test\test-windows-official-upgrade.ps1 @parameters
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: official-upgrade-${{ matrix.variant }}
+          name: official-upgrade-${{ matrix.variant }}-${{ matrix.privilege }}
           path: .cache/official-upgrade/*.log
   changes:
     name: Detect Windows installer changes

@@ -335,7 +335,7 @@ func TestWindowsInstallerUsesNativeTaskStartBridge(t *testing.T) {
 		"service task-start",
 		"--task-name",
 		"--expected-user-sid",
-        "-AgentDockBinary $sourceBinary",
+		"-AgentDockBinary $sourceBinary",
 	} {
 		if !strings.Contains(combined, want) {
 			t.Fatalf("Windows native task bridge missing %q", want)
