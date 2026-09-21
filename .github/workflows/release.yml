@@ -229,8 +229,8 @@ jobs:
           New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
           $env:TEMP = $tempRoot
           $env:TMP = $tempRoot
-          "TEMP=$tempRoot" >> $env:GITHUB_ENV
-          "TMP=$tempRoot" >> $env:GITHUB_ENV
+          "TEMP=$tempRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "TMP=$tempRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           go test ./internal/envstore ./internal/fs/securepath
 
       - name: Download and validate exact installer bytes
@@ -787,8 +787,8 @@ jobs:
           New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
           $env:TEMP = $tempRoot
           $env:TMP = $tempRoot
-          "TEMP=$tempRoot" >> $env:GITHUB_ENV
-          "TMP=$tempRoot" >> $env:GITHUB_ENV
+          "TEMP=$tempRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "TMP=$tempRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           $tag = '${{ github.event.inputs.tag || github.ref_name }}'
           $downloadedInstaller = Join-Path $env:TEMP 'install-release.ps1'
           $installerUrl = "https://github.com/${{ github.repository }}/releases/download/$tag/install.ps1"

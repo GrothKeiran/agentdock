@@ -18,6 +18,10 @@ on:
       - main
   workflow_dispatch:
     inputs:
+      published_tag:
+        description: 'Validate an existing release without rebuilding or overwriting its assets'
+        required: false
+        type: string
       test_tag:
         description: 'Optional temporary prerelease tag, for example v0.5.4-windows-test-20260802-1'
         required: false
@@ -27,9 +31,48 @@ permissions:
   contents: write
 
 jobs:
+  published-validation:
+    name: Validate exact published Windows package
+    if: github.event_name == 'workflow_dispatch' && inputs.published_tag != ''
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      RELEASE_TAG: ${{ inputs.published_tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download published artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $PWD '.cache\published-validation'
+          New-Item -ItemType Directory -Path $root -Force | Out-Null
+          "TEST_ROOT=$root" >> $env:GITHUB_ENV
+          "TEMP=$root" >> $env:GITHUB_ENV
+          "TMP=$root" >> $env:GITHUB_ENV
+          gh release download $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY -p install.ps1 -p AgentDockSetup-amd64.exe -p agentdock_windows_amd64.zip -p '*.sha256' -D $root
+          if ($LASTEXITCODE) { throw 'Published download failed' }
+          foreach ($name in @('install.ps1', 'AgentDockSetup-amd64.exe', 'agentdock_windows_amd64.zip')) {
+            $expected = ((Get-Content "$root\$name.sha256" -Raw).Trim() -split '\s+')[0]
+            if ((Get-FileHash "$root\$name" -Algorithm SHA256).Hash -ne $expected) { throw "Checksum mismatch: $name" }
+          }
+          Expand-Archive "$root\agentdock_windows_amd64.zip" "$root\fixture"
+      - name: Validate PowerShell 5.1 installer bytes
+        shell: powershell
+        run: |
+          & .\scripts\test\test-install-windows-download.ps1 -Url "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_TAG/install.ps1" -ExpectedInstallerPath .\scripts\install\install.ps1 -OutputPath "$env:TEST_ROOT\checked-install.ps1"
+      - name: Install and uninstall published Setup
+        shell: powershell
+        run: |
+          & .\scripts\test\test-windows-setup-e2e.ps1 -SetupPath "$env:TEST_ROOT\AgentDockSetup-amd64.exe" -LegacyCorePath "$env:TEST_ROOT\fixture\agentdock.exe" -LegacyTrayPath "$env:TEST_ROOT\fixture\agentdock-tray.exe" -AllowLegacyTaskMutation
+      - name: Install and upgrade published version as standard user
+        shell: powershell
+        run: |
+          & .\scripts\test\run-windows-installer-e2e-as-standard-user.ps1 -InstallerPath "$env:TEST_ROOT\install.ps1" -Version $env:RELEASE_TAG -ReleaseBaseUrl "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_TAG"
+
   official-upgrade:
     name: Official v0.8.3 upgrade (${{ matrix.variant }}, ${{ matrix.privilege }})
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.published_tag == ''
     runs-on: windows-latest
     timeout-minutes: 20
     env:
@@ -161,7 +204,7 @@ jobs:
   validate:
     name: Validate installer on Windows PowerShell 5.1
     needs: changes
-    if: needs.changes.outputs.relevant == 'true'
+    if: needs.changes.outputs.relevant == 'true' && !inputs.published_tag
     runs-on: windows-latest
     timeout-minutes: 30
     env:
@@ -598,7 +641,7 @@ jobs:
 
   gate:
     name: Windows Installer gate
-    needs: [changes, validate]
+    needs: [changes, validate, official-upgrade, published-validation]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -609,7 +652,20 @@ jobs:
           CHANGES_RESULT: ${{ needs.changes.result }}
           RELEVANT: ${{ needs.changes.outputs.relevant }}
           VALIDATE_RESULT: ${{ needs.validate.result }}
+          PUBLISHED_TAG: ${{ inputs.published_tag }}
+          PUBLISHED_RESULT: ${{ needs.published-validation.result }}
+          EVENT_NAME: ${{ github.event_name }}
+          OFFICIAL_RESULT: ${{ needs.official-upgrade.result }}
         run: |
+          if [[ -n "$PUBLISHED_TAG" ]]; then
+            [[ "$PUBLISHED_RESULT" == "success" ]] || exit 1
+            echo 'Published Windows package validation passed.'
+            exit 0
+          fi
+          if [[ "$EVENT_NAME" == "workflow_dispatch" && "$OFFICIAL_RESULT" != "success" ]]; then
+            echo "Official upgrade validation did not pass: $OFFICIAL_RESULT" >&2
+            exit 1
+          fi
           if [[ "$CHANGES_RESULT" != "success" ]]; then
             echo "Windows installer change detection failed: $CHANGES_RESULT" >&2
             exit 1
