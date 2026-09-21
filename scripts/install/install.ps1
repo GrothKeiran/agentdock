@@ -48,9 +48,11 @@ function Invoke-SetupRuntimeProcess {
     # Inno Setup 6.7+ enables ProcessRedirectionTrustPolicy on its process tree.
     # Task Scheduler creates the long-lived runtime from a clean user process context
     # while Setup keeps RedirectionGuard enabled for install-time filesystem work.
+    # The installed entry can still resolve to the old Core during migration or
+    # rollback. Only the verified bundled Core is guaranteed to support task-start.
     & $setupRuntimeLauncherPath `
         -FilePath $FilePath `
-        -AgentDockBinary $destinationBinary `
+        -AgentDockBinary $sourceBinary `
         -Arguments $Arguments `
         -WaitForExit:$WaitForExit
 }

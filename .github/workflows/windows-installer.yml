@@ -27,6 +27,55 @@ permissions:
   contents: write
 
 jobs:
+  official-upgrade:
+    name: Official v0.8.3 upgrade (${{ matrix.variant }})
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [baseline, patched]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Prepare real released packages
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $PWD '.cache\official-upgrade'
+          New-Item -ItemType Directory -Path $root -Force | Out-Null
+          "TEST_ROOT=$root" >> $env:GITHUB_ENV
+          "TEMP=$root" >> $env:GITHUB_ENV
+          "TMP=$root" >> $env:GITHUB_ENV
+          gh release download v0.8.3 --repo uvwt/agentdock -p AgentDockSetup-amd64.exe -D "$root\official"
+          if ($LASTEXITCODE) { throw 'Official download failed' }
+          gh release download v0.8.3-computer-use.2 --repo GrothKeiran/agentdock -p AgentDockSetup-amd64.exe -p agentdock_windows_amd64.zip -p agentdock_windows_amd64.zip.sha256 -D "$root\preview"
+          if ($LASTEXITCODE) { throw 'Preview download failed' }
+      - name: Build patched Setup
+        if: matrix.variant == 'patched'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Invoke-WebRequest 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe' -OutFile "$env:TEST_ROOT\cloudflared.exe"
+          & .\packaging\windows\build-windows-offline-setup.ps1 -Version '0.8.3-computer-use.2' -Architecture amd64 -AgentDockArchive "$env:TEST_ROOT\preview\agentdock_windows_amd64.zip" -AgentDockChecksumFile "$env:TEST_ROOT\preview\agentdock_windows_amd64.zip.sha256" -CloudflaredBinary "$env:TEST_ROOT\cloudflared.exe" -OutputDirectory "$env:TEST_ROOT\patched"
+      - name: Upgrade running official installation
+        shell: powershell
+        run: |
+          $parameters = @{
+            LegacySetup = "$env:TEST_ROOT\official\AgentDockSetup-amd64.exe"
+            TargetSetup = "$env:TEST_ROOT\preview\AgentDockSetup-amd64.exe"
+            TestRoot = $env:TEST_ROOT
+          }
+          if ('${{ matrix.variant }}' -eq 'baseline') { $parameters.ExpectFailure = $true }
+          else { $parameters.TargetSetup = "$env:TEST_ROOT\patched\AgentDockSetup-amd64.exe" }
+          & .\scripts\test\test-windows-official-upgrade.ps1 @parameters
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: official-upgrade-${{ matrix.variant }}
+          path: .cache/official-upgrade/*.log
   changes:
     name: Detect Windows installer changes
     runs-on: ubuntu-latest
