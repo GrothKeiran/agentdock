@@ -310,7 +310,8 @@ jobs:
           $asset = "agentdock_windows_$env:GOARCH.zip"
           python .\packaging\build-core-skill-bundle.py --output dist\share\agentdock\core-skills
           Copy-Item .\packaging\windows\assets\agentdock.ico dist\agentdock.ico -Force
-          Compress-Archive -Path dist\agentdock.exe, dist\agentdock-tray.exe, dist\agentdock-arbiter.exe, dist\agentdock-shim.exe, dist\agentdock-tray-shim.exe, dist\agentdock.ico, dist\share, dist\wsl-helper -DestinationPath $asset -Force
+          Copy-Item .\scripts\install\repair-windows-preview.ps1, .\scripts\install\launch-windows-process.ps1, .\scripts\install\Repair-AgentDock.cmd dist -Force
+          Compress-Archive -Path dist\agentdock.exe, dist\agentdock-tray.exe, dist\agentdock-arbiter.exe, dist\agentdock-shim.exe, dist\agentdock-tray-shim.exe, dist\agentdock.ico, dist\share, dist\wsl-helper, dist\repair-windows-preview.ps1, dist\launch-windows-process.ps1, dist\Repair-AgentDock.cmd -DestinationPath $asset -Force
           $hash = (Get-FileHash -LiteralPath $asset -Algorithm SHA256).Hash.ToLowerInvariant()
           [IO.File]::WriteAllText("$asset.sha256", "$hash  $asset`n", [Text.UTF8Encoding]::new($false))
 
@@ -826,7 +827,8 @@ jobs:
           $ErrorActionPreference = 'Stop'
           & .\scripts\test\run-windows-installer-e2e-as-standard-user.ps1 `
             -InstallerPath $env:DOWNLOADED_INSTALLER `
-            -Version $env:RELEASE_TAG
+            -Version $env:RELEASE_TAG `
+            -ReleaseBaseUrl "https://github.com/${{ github.repository }}/releases/download/$env:RELEASE_TAG"
 
   verify-container:
     name: Verify published containers

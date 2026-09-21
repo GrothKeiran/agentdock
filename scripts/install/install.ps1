@@ -1949,9 +1949,6 @@ exit `$LASTEXITCODE
             $healthStatus = 'healthy'
         }
 
-        if ($RegisterStartup -or $trayProcessWasRunning) {
-            Start-AgentDockTray -BinaryPath $destinationTrayBinary
-        }
     } catch {
         if ($existingInstallDetected -or $effectivePrivilegeMode -ne 'standard') {
             throw
@@ -1985,6 +1982,18 @@ exit `$LASTEXITCODE
     }
 
     $taskTransactionCommitted = $taskTransactionStarted
+    # The stable Tray shim cannot launch an uncommitted installer generation.
+    # Start it only after commit; a UI launch failure must not undo a healthy Core.
+    if ($RegisterStartup -or $trayProcessWasRunning) {
+        try {
+            Start-AgentDockTray -BinaryPath $destinationTrayBinary
+        } catch {
+            $trayWarning = 'AgentDock was installed, but the control panel could not be opened. Open it from the Start menu.'
+            $installWarningMessage = ($installWarningMessage + ' ' + $trayWarning).Trim()
+            $installWarningCode = ($installWarningCode + ',tray-launch-deferred').Trim(',')
+            Write-Warning "$trayWarning Details: $($_.Exception.Message)"
+        }
+    }
     $publicMCPUrl = ''
     if (-not [string]::IsNullOrWhiteSpace($publicUrl)) {
         $publicMCPUrl = "$publicUrl/mcp"

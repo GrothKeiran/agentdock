@@ -22,7 +22,8 @@ if ($transaction.failure.code -ne 'external_rollback_failed' -or
     $transaction.target_version -notin @('v0.8.3-computer-use.1', 'v0.8.3-computer-use.2')) {
     throw 'This is not the known v0.8.3 preview rollback failure. State was not cleared.'
 }
-if ($inspection.pointer_state -ne 'committed' -or $inspection.pointer_active_version -ne 'v0.8.3') {
+if ($inspection.pointer_state -ne 'missing' -and
+    ($inspection.pointer_state -ne 'committed' -or $inspection.pointer_active_version -ne 'v0.8.3')) {
     throw 'The original v0.8.3 generation has not been restored. State was not cleared.'
 }
 $manifest = Get-Content (Join-Path $InstallRoot 'runtime.json') -Raw | ConvertFrom-Json
@@ -56,7 +57,10 @@ if ($LASTEXITCODE -ne 0 -or $version.version -ne '0.8.3') { throw 'Installed Cor
 $backup = Join-Path $InstallRoot ('logs\installer\preview-recovery-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $backup -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $InstallRoot 'install') -Destination $backup -Recurse
-Copy-Item -LiteralPath (Join-Path $InstallRoot 'active-version.json'), (Join-Path $InstallRoot 'runtime.json') -Destination $backup
+Copy-Item -LiteralPath (Join-Path $InstallRoot 'runtime.json') -Destination $backup
+if (Test-Path (Join-Path $InstallRoot 'active-version.json')) {
+    Copy-Item -LiteralPath (Join-Path $InstallRoot 'active-version.json') -Destination $backup
+}
 
 & $broker -FilePath $installedBinary -AgentDockBinary $AgentDockBinary -Arguments "service start --runtime-root `"$InstallRoot`"" -WaitForExit -TimeoutSeconds 90
 $status = (& $installedBinary service status --runtime-root $InstallRoot | ConvertFrom-Json)

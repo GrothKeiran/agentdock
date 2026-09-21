@@ -6,6 +6,20 @@
 review_threshold_lines: 300
 
 scripts:
+  - path: scripts/install/repair-windows-preview.ps1
+    class: runtime-adapter
+    owner: installer
+    public_contract: false
+    deletable: true
+    notes: 仅恢复官方 v0.8.3 到 .1/.2 预览版失败后的标准用户运行状态；健康检查通过后确认 abandon。
+
+  - path: scripts/test/test-windows-official-upgrade.ps1
+    class: test
+    owner: installer
+    public_contract: false
+    deletable: false
+    notes: 用真实官方 v0.8.3 Setup 验证跨版本升级、凭据保留及失败状态恢复。
+
   - path: scripts/install/install.sh
     class: bootstrap
     owner: installer

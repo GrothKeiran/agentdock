@@ -32,6 +32,10 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     timeout-minutes: 20
+    env:
+      GOCACHE: ${{ github.workspace }}\.cache\go-build
+      GOMODCACHE: ${{ github.workspace }}\.cache\go-mod
+      GOPATH: ${{ github.workspace }}\.cache\gopath
     strategy:
       fail-fast: false
       matrix:
@@ -61,6 +65,28 @@ jobs:
           if ($LASTEXITCODE) { throw 'Official download failed' }
           gh release download v0.8.3-computer-use.2 --repo GrothKeiran/agentdock -p AgentDockSetup-amd64.exe -p agentdock_windows_amd64.zip -p agentdock_windows_amd64.zip.sha256 -D "$root\preview"
           if ($LASTEXITCODE) { throw 'Preview download failed' }
+      - uses: actions/setup-go@v6
+        if: matrix.variant != 'baseline'
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Test and rebuild patched stable launchers
+        if: matrix.variant != 'baseline'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          go test ./cmd/agentdock-shim
+          if ($LASTEXITCODE) { throw 'Shim tests failed' }
+          $payload = "$env:TEST_ROOT\patched-payload"
+          Expand-Archive "$env:TEST_ROOT\preview\agentdock_windows_amd64.zip" $payload
+          go build -trimpath -ldflags '-s -w' -o "$payload\agentdock-shim.exe" ./cmd/agentdock-shim
+          if ($LASTEXITCODE) { throw 'Core shim build failed' }
+          go build -trimpath -ldflags '-s -w -H=windowsgui' -o "$payload\agentdock-tray-shim.exe" ./cmd/agentdock-shim
+          if ($LASTEXITCODE) { throw 'Tray shim build failed' }
+          $archive = "$env:TEST_ROOT\preview\agentdock_windows_amd64.zip"
+          Compress-Archive -Path "$payload\*" -DestinationPath $archive -Force
+          $hash = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          [IO.File]::WriteAllText("$archive.sha256", "$hash  agentdock_windows_amd64.zip`n", [Text.UTF8Encoding]::new($false))
       - name: Build patched Setup
         if: matrix.variant != 'baseline'
         shell: pwsh
@@ -138,6 +164,11 @@ jobs:
     if: needs.changes.outputs.relevant == 'true'
     runs-on: windows-latest
     timeout-minutes: 30
+    env:
+      GOCACHE: ${{ github.workspace }}\.cache\go-build
+      GOMODCACHE: ${{ github.workspace }}\.cache\go-mod
+      GOPATH: ${{ github.workspace }}\.cache\gopath
+      NUGET_PACKAGES: ${{ github.workspace }}\.cache\nuget
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -146,7 +177,15 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-          cache: true
+          cache: false
+
+      - name: Keep test temporary files in the project
+        shell: pwsh
+        run: |
+          $tempRoot = Join-Path $PWD '.cache\tmp'
+          New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+          "TEMP=$tempRoot" >> $env:GITHUB_ENV
+          "TMP=$tempRoot" >> $env:GITHUB_ENV
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5

@@ -15,6 +15,7 @@ import (
 	"golang.org/x/sys/windows"
 
 	"github.com/uvwt/agentdock/internal/fs/processlock"
+	"github.com/uvwt/agentdock/internal/installer"
 	processctl "github.com/uvwt/agentdock/internal/process"
 	"github.com/uvwt/agentdock/internal/updateengine"
 )
@@ -116,6 +117,18 @@ func resolveActiveWithRecovery(root string, store *updateengine.Store, layout up
 	}
 
 	transaction, transactionErr := store.ReadTransaction()
+	if active.State == updateengine.StateTrial {
+		// Installer and updater own separate journals. Only a matching, live installer
+		// may start its trial through the stable Scheduled Task entry. An abandoned
+		// trial must still be refused; do not turn a failed install into a commit.
+		live, err := liveInstallerTrial(root, active)
+		if err != nil {
+			return updateengine.ActiveVersion{}, err
+		}
+		if live {
+			return active, nil
+		}
+	}
 	if transactionErr != nil {
 		if active.State == updateengine.StateTrial {
 			// Installer fresh bootstrap 把 pointer 停在 trial，直到 install commit。
@@ -184,6 +197,53 @@ func resolveActiveWithRecovery(root string, store *updateengine.Store, layout up
 		return updateengine.ActiveVersion{}, fmt.Errorf("read recovered AgentDock active version: %w", err)
 	}
 	return recovered, nil
+}
+
+func liveInstallerTrial(root string, active updateengine.ActiveVersion) (bool, error) {
+	store, err := installer.NewStore(root)
+	if err != nil {
+		return false, err
+	}
+	transaction, err := store.ReadTransaction()
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("read installer trial journal: %w", err)
+	}
+	if transaction.TransactionID != active.TransactionID {
+		return false, nil // This can be a trial owned by the updater instead.
+	}
+	if active.TransactionID == "" || transaction.SchemaVersion != installer.SchemaVersion ||
+		transaction.Platform != "windows" || transaction.State != updateengine.StateTrial ||
+		(transaction.Action != installer.ActionInstall && transaction.Action != installer.ActionRepair) ||
+		!strings.EqualFold(filepath.Clean(transaction.InstallRoot), filepath.Clean(root)) ||
+		updateengine.NormalizeVersion(transaction.TargetVersion) != active.ActiveVersion {
+		return false, errors.New("active installer trial does not match its journal")
+	}
+	switch transaction.Phase {
+	case installer.PhaseStart, installer.PhaseHealth, installer.PhaseSkills, installer.PhaseTunnel:
+	default:
+		return false, fmt.Errorf("installer trial is not starting services: %s", transaction.Phase)
+	}
+	// Probe an existing lock without creating it. Access denied is NOT evidence
+	// that an installer owns the lock; only sharing violation proves exclusivity.
+	name, err := windows.UTF16PtrFromString(store.LockPath())
+	if err != nil {
+		return false, err
+	}
+	handle, err := windows.CreateFile(name, windows.GENERIC_READ|windows.GENERIC_WRITE,
+		0, nil, windows.OPEN_EXISTING, windows.FILE_ATTRIBUTE_NORMAL, 0)
+	if errors.Is(err, windows.ERROR_SHARING_VIOLATION) {
+		return true, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("installer trial has no verifiable live owner: %w", err)
+	}
+	if err := windows.CloseHandle(handle); err != nil {
+		return false, err
+	}
+	return false, errors.New("installer trial owner is no longer running; recover the installation first")
 }
 
 func trayRequiresWait(args []string) bool {
